@@ -72,6 +72,25 @@ export function createDeviceView(ctx) {
       );
     }
 
+    // Temporary diagnostic:
+    // Dump the complete property manifest and current property values for devices
+    // that advertise the SDK "arming" capability. This lets us determine how
+    // guard mode/current mode should map to Home Assistant's alarm_control_panel.
+    if (m.capabilities.includes("arming")) {
+      const specs = propertySpecs(dev);
+      const state = propertyState(dev);
+
+      console.log(
+        `[bridge:arming-diagnostic] ` +
+          `sn=${m.sn} ` +
+          `name=${JSON.stringify(m.name)} ` +
+          `model=${JSON.stringify(model)} ` +
+          `codec=${JSON.stringify(m.codec)} ` +
+          `properties=${JSON.stringify(specs)} ` +
+          `state=${JSON.stringify(state)}`,
+      );
+    }
+
     return {
       sn: m.sn,
       name: m.name, // owner's device name (e.g. "Dining room"), from device_name
