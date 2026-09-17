@@ -17,7 +17,26 @@ export function createDeviceView(ctx) {
   async function describeDevice(sn) {
     const dev = await eufy.getDevice(sn);
     const m = dev.describe();
-    const isCamera = m.capabilities.includes("camera") || m.capabilities.includes("video");
+
+    const hasCameraCapability = m.capabilities.includes("camera");
+    const hasVideoCapability = m.capabilities.includes("video");
+    const isCamera = hasCameraCapability || hasVideoCapability;
+
+    // Temporary diagnostics for investigating devices that are incorrectly
+    // classified as stream-capable cameras.
+    console.log(
+      `[bridge:device-classification] ` +
+        `sn=${m.sn} ` +
+        `name=${JSON.stringify(m.name)} ` +
+        `model=${JSON.stringify(m.model)} ` +
+        `modelName=${JSON.stringify(m.modelName)} ` +
+        `codec=${JSON.stringify(m.codec)} ` +
+        `cameraCap=${hasCameraCapability} ` +
+        `videoCap=${hasVideoCapability} ` +
+        `streamEligible=${isCamera} ` +
+        `capabilities=${JSON.stringify(m.capabilities)}`,
+    );
+
     return {
       sn: m.sn,
       name: m.name, // owner's device name (e.g. "Dining room"), from device_name
@@ -59,7 +78,12 @@ export function createDeviceView(ctx) {
   async function deviceList() {
     const devices = await eufy.getDevices();
     return Promise.all(
-      devices.map((d) => describeDevice(d.sn).catch((e) => ({ sn: d.sn, error: String(e?.message ?? e) }))),
+      devices.map((d) =>
+        describeDevice(d.sn).catch((e) => ({
+          sn: d.sn,
+          error: String(e?.message ?? e),
+        })),
+      ),
     );
   }
 
