@@ -41,9 +41,15 @@ RUN case "${TARGETARCH:-amd64}" in \
 # `npm ci` installs the exact locked (stable) tree; the dev build then overlays the requested SDK dist-tag
 # on top (see SDK_DIST_TAG above). `--no-save` keeps package.json/lock untouched, so no drift leaks in.
 ARG SDK_DIST_TAG=
+ARG SDK_GIT_REF=
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund \
- && if [ -n "$SDK_DIST_TAG" ]; then \
+ && if [ -n "$SDK_GIT_REF" ]; then \
+      echo "SDK_GIT_REF=$SDK_GIT_REF → overlaying diagnostic SDK from GitHub"; \
+      apk add --no-cache git \
+      && npm install --omit=dev --no-audit --no-fund --no-save "git+https://github.com/chubban-lgtm/eufy-sdk.git#$SDK_GIT_REF" \
+      && node -e "console.log('SDK diagnostic overlay installed:', JSON.parse(require('fs').readFileSync('node_modules/@mega-yfue/eufy-sdk/package.json')).version)"; \
+    elif [ -n "$SDK_DIST_TAG" ]; then \
       echo "SDK_DIST_TAG=$SDK_DIST_TAG → overlaying @mega-yfue/eufy-sdk@$SDK_DIST_TAG (dev channel)"; \
       npm install --omit=dev --no-audit --no-fund --no-save "@mega-yfue/eufy-sdk@$SDK_DIST_TAG"; \
       node -e "console.log('SDK now:', JSON.parse(require('fs').readFileSync('node_modules/@mega-yfue/eufy-sdk/package.json')).version)"; \
