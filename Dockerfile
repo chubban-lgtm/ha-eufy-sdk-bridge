@@ -24,13 +24,16 @@ RUN npm ci --omit=dev --no-audit --no-fund \
       apk add --no-cache git \
       && git clone --depth 1 --branch "$SDK_GIT_REF" https://github.com/chubban-lgtm/eufy-sdk.git /tmp/eufy-sdk \
       && cd /tmp/eufy-sdk \
+      && echo "SDK source commit: $(git rev-parse HEAD)" \
       && npm ci --no-audit --no-fund \
       && npm run build \
       && test -f dist/index.js \
+      && node --input-type=module -e "const m=await import('./dist/index.js'); const required=['SolixClient','FileSessionStore','SolixMqtt','discoverSolixDevices','solarbankSceneReadings']; const missing=required.filter(k=>!(k in m)); if(missing.length){console.error('SDK missing bridge-required exports:',missing);process.exit(1)} console.log('SDK source export check OK:',required.join(', '))" \
       && npm pack --pack-destination /tmp \
       && cd /app \
       && npm install --omit=dev --no-audit --no-fund --no-save /tmp/mega-yfue-eufy-sdk-*.tgz \
       && test -f node_modules/@mega-yfue/eufy-sdk/dist/index.js \
+      && node --input-type=module -e "const m=await import('@mega-yfue/eufy-sdk'); const required=['SolixClient','FileSessionStore','SolixMqtt','discoverSolixDevices','solarbankSceneReadings']; const missing=required.filter(k=>!(k in m)); if(missing.length){console.error('INSTALLED SDK missing bridge-required exports:',missing);process.exit(1)} console.log('Installed SDK export check OK:',required.join(', '))" \
       && rm -rf /tmp/eufy-sdk /tmp/mega-yfue-eufy-sdk-*.tgz \
       && node -e "console.log('SDK diagnostic overlay installed:', JSON.parse(require('fs').readFileSync('node_modules/@mega-yfue/eufy-sdk/package.json')).version)"; \
     elif [ -n "$SDK_DIST_TAG" ]; then \
@@ -42,7 +45,9 @@ RUN npm ci --omit=dev --no-audit --no-fund \
 COPY server.mjs streams.mjs go2rtc-config.mjs ./
 COPY src ./src
 COPY bin ./bin
-RUN chmod +x bin/start.sh && ln -sf /app/bin/start.sh /usr/local/bin/eufy-sdk-bridge
+RUN chmod +x bin/start.sh && ln -sf /app/bin/start.sh /usr/local/bin/eufy-sdk-bridge \
+ && node --input-type=module -e "await import('./src/solix.mjs'); console.log('Bridge Solix import check OK')" \
+ && node --input-type=module -e "await import('./src/client.mjs'); console.log('Bridge client import check OK')"
 
 ENV BRIDGE_APP_DIR=/app BRIDGE_PORT=3000 BRIDGE_HOST=0.0.0.0 \
     GO2RTC_CONFIG=/app/data/go2rtc.yaml EUFY_SESSION=/app/data/.eufy-session.json
